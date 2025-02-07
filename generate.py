@@ -7,13 +7,15 @@ import re
 class Recommendations(BaseModel):
     monitoring: List[str]
     medication: List[str]
-    heart_health_recommendation: List[str]
-    liver_health_recommendation: List[str]
-    kidney_health_recommendation: List[str]
+    heart_health: List[str]
+    liver_health: List[str]
+    kidney_health: List[str]
+    mental_health_screening: List[str]
+    diet_suggestion: List[str]
 
 class Insights(BaseModel):
     primary_risk_factors: List[str]
-    trend_analysis: str
+    trend_analysis: List[str]
 
 class ActionItems(BaseModel):
     immediate_actions: List[str]
@@ -37,7 +39,8 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
     prompt = f"""
 **Comprehensive Health Risk Assessment & Clinical Guidance**
 
-Analyze the provided patient data and generate a **structured JSON response** with **clinically relevant recommendations** based on validated numerical insights. Ensure precise, **non-repetitive**, and **quantified** recommendations with **historical comparisons** between the latest and previous data,data is in the ascending order of date but date is not mentioned so take help of 'Age' key for better understanding of the latest and old data records/instance
+Analyze the provided patient data and generate a **structured JSON response** with **clinically relevant recommendations** based on validated twice, numerical insights. Ensure precise, non-repetitive, and quantified or changes recommendations with comparisons between the latest and previous data,
+**data is in the ascending order with last being the latest validate and generate the content**
 
 #### **Patient Data:**  
 {json.dumps(input_data, indent=2)}
@@ -45,27 +48,32 @@ Analyze the provided patient data and generate a **structured JSON response** wi
 ---
 
 ### **Output Requirements**:
-1. **Strict JSON Format**: Follow the exact structure of the `ClinicalAssessment` class and use different action verbs to start the sentence and quantify with data changes for all arguments/parameters/keys:
-   ```json
-   {{
-       "recommendations": {{
-           "monitoring": ["item1", "item2",..],
-           "medication": ["Consider discussing medication options with a healthcare provider, including: item1",..],
-            "heart_health_recommendation": ["item1 due to trends",],
-            "liver_health_recommendation": ["item1 due to trends",],
-            "kidney_health_recommendation": ["item1 due to trends",]
-       }},
-       "insights": {{
-           "primary_risk_factors": ["factor1_detailed", "factor2_detailed",..],
-           "trend_analysis": "Detailed analysis with quantifying changes with numbers/percentage...",
-           "historical_comparisons": ["comparison1", "comparison2",...]
+1. **Strict JSON Format**: Follow the exact structure of the `ClinicalAssessment` class and use different action verbs(no repeatation):
+
+**for recommendations just have string lists returned with some metrics comparison wherever necessary also have donts points as well as only do point are here in each item**
+"recommendations": {{
+            **for each item, search in your knowledge base for every profile what scores or data can be used for generating recommendations and use this scores based on patient data to generate, at least generate 1 value with max being 5 and an average of 2-3 points** 
+            "monitoring": **Generate at least two recommendation for monitoring based on the patient's latest data**,
+            "medication": **Generate at least two medication recommendation based on the patient's latest data**,
+            "heart_health": **Generate at least two recommendation related to heart health based on heart metrics like heart rate, SBP, DBP, cholesterol levels, ASCVD risk, etc.**,
+            "liver_health": **Generate at least two recommendation related to liver health based on liver-related metrics such as bilirubin, protein levels, albumin, globulin, etc.**,
+            "kidney_health": **Generate at least two recommendation for kidney health based on kidney-related metrics like creatinine, CKD risk, etc.**,
+            "mental_health Screening": **Generate at least two recommendation based on mental health indicators from the available patient data**,
+            "diet_suggestion": **Generate at least two diet suggestion based on the patient's overall profile data (e.g., waist circumference, BMI, cholesterol levels, heart_profile,liver_profile,kidney_profile)**,
+       }}
+
+**for insights return metrics comparison for all points with validation as proof from patient data, triple check **important****.
+"insights": {{
+           "primary_risk_factors": **each factor when risk is going up ignore age and all show for scores_metrics and health_metrics only with proof based on patient data(latest being at last index)**,
+           "trend_analysis": **each analysis should have similar comparisons,do not mix with each other,**validate thrice until you are 100% confident and quantify** based on patient data(latest being at last index)** ,
        }},
        "action_items": {{
            "immediate_actions": ["action1", "action2",..],
            "long_term_goals": ["goal1", "goal2",..]
-       }},
-       "summary": "Synopsis is 120 words precise with insights,recommendations,action items summarized",
-   }}"""
+       }}
+
+"summary": "Detailed Summary **main-content** as per your understanding in 300 words of patient current/latest data",
+"""
 
     try:
         response = ollama.chat(
@@ -74,9 +82,9 @@ Analyze the provided patient data and generate a **structured JSON response** wi
         format=ClinicalAssessment.model_json_schema(),
         options={
             'temperature': 0.1,  # Reduce randomness for better structure
-            'num_ctx': 4096,
+            'num_ctx': 6096,
             'max_tokens': 4000,
-            'frequency_penalty': 1.2,  # Lowers likelihood of repeating content
+            'repeat_penalty':1.2,
         }   
     )
 

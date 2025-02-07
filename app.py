@@ -523,6 +523,7 @@ def generate_report():
         
         report = json.loads(json.dumps(report, default=lambda x: int(x) if isinstance(x, np.integer) else x))
         final_json = analyzer.get_full_data()
+        print(final_json)
         # Benchmark and test
         start_time = time.time()
         results = generate_health_insights(final_json)
@@ -535,7 +536,6 @@ def generate_report():
         report.update(results)
         
         
-
         return jsonify(report), 200
 
     except ValueError as e:
