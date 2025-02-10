@@ -39,8 +39,9 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
     prompt = f"""
 **Comprehensive Health Risk Assessment & Clinical Guidance**
 
-Analyze the provided patient data and generate a **structured JSON response** with **clinically relevant recommendations** based on validated twice, numerical insights. Ensure precise, non-repetitive, and quantified or changes recommendations with comparisons between the latest and previous data,
-**data is in the ascending order with last being the latest validate and generate the content**
+Analyze the provided patient data and generate a **structured JSON response** with **clinically relevant recommendations** based on validated twice, numerical insights. Ensure precise, non-repetitive, and quantified or changes recommendations with comparisons between the latest and previous data with their ideal ranges of normal type for justification ,
+**data is in the ascending order with last being the latest validate thrice and generate the content**
+**also have strings with no brackets (,[ and asterisk(*) symbol with having justification of the **insights,recommendations and summary** data with their ideal range of values which can be termed as normal along with the present scores for better understanding **important** and **main content**
 
 #### **Patient Data:**  
 {json.dumps(input_data, indent=2)}
@@ -50,7 +51,7 @@ Analyze the provided patient data and generate a **structured JSON response** wi
 ### **Output Requirements**:
 1. **Strict JSON Format**: Follow the exact structure of the `ClinicalAssessment` class and use different action verbs(no repeatation):
 
-**for recommendations just have string lists returned with some metrics comparison wherever necessary also have donts points as well as only do point are here in each item**
+**for recommendations just have string lists returned with some metrics comparison wherever necessary also have donts points as well as only do point are here in each item **do not use any brackets have string**
 "recommendations": {{
             **for each item, search in your knowledge base for every profile what scores or data can be used for generating recommendations and use this scores based on patient data to generate, at least generate 1 value with max being 5 and an average of 2-3 points** 
             "monitoring": **Generate at least two recommendation for monitoring based on the patient's latest data**,
@@ -62,19 +63,18 @@ Analyze the provided patient data and generate a **structured JSON response** wi
             "diet_suggestion": **Generate at least two diet suggestion based on the patient's overall profile data (e.g., waist circumference, BMI, cholesterol levels, heart_profile,liver_profile,kidney_profile)**,
        }}
 
-**for insights return metrics comparison for all points with validation as proof from patient data, triple check **important****.
+**for insights return metrics comparison for all points with validation as proof from patient data, triple check **important**
 "insights": {{
            "primary_risk_factors": **each factor when risk is going up ignore age and all show for scores_metrics and health_metrics only with proof based on patient data(latest being at last index)**,
-           "trend_analysis": **each analysis should have similar comparisons,do not mix with each other,**validate thrice until you are 100% confident and quantify** based on patient data(latest being at last index)** ,
+           "trend_analysis": **each analysis should have similar comparisons,do not mix with each other,**validate thrice until you are 100% confident and quantify** based on patient data(latest being at last index)**,
        }},
        "action_items": {{
            "immediate_actions": ["action1", "action2",..],
            "long_term_goals": ["goal1", "goal2",..]
        }}
 
-"summary": "Detailed Summary **main-content** as per your understanding in 300 words of patient current/latest data",
+"summary": "Detailed Summary **main-content** as per your understanding in 300 words of patient current/latest data, also have the range for that metrics in numbers which is justifying the summary **important**",
 """
-
     try:
         response = ollama.chat(
         model='qwen2.5:3b',

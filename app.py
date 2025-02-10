@@ -509,34 +509,94 @@ def generate_report():
         # Get the person_id from the request
 
         data = request.json
-        # data_dict = json.loads(data)  # Convert JSON string to dictionary
-        df = pd.DataFrame(data)  # Convert dictionary to DataFrame
-
         if not data:
             return jsonify({"error": "Data is required"}), 400
 
-        # Create an instance of EnhancedHealthMetrics
-        analyzer = EnhancedHealthMetrics(df)
-        
-        # Generate the report using the instance method
-        report = analyzer.generate_report()
-        
-        report = json.loads(json.dumps(report, default=lambda x: int(x) if isinstance(x, np.integer) else x))
-        final_json = analyzer.get_full_data()
-        print(final_json)
-        # Benchmark and test
-        start_time = time.time()
-        results = generate_health_insights(final_json)
-        execution_time = time.time() - start_time
+        else:
+            # data_dict = json.loads(data)  # Convert JSON string to dictionary
+            df = pd.DataFrame(data)  # Convert dictionary to DataFrame
 
-        # Convert results if needed
-        results = json.loads(json.dumps(results, default=lambda x: int(x) if isinstance(x, np.integer) else x))
 
-        # Append results directly into report
-        report.update(results)
-        
-        
-        return jsonify(report), 200
+            last_row = df.iloc[-1]
+            null_count = last_row.isna().sum()
+
+            # Calculate the percentage of None values in the last row
+            null_percentage = (null_count / len(last_row)) * 100
+            numeric_columns = df.select_dtypes(include=['number']).columns
+
+            medians = df[numeric_columns].median()
+
+            # Check if the None percentage is greater than or equal to 80
+            if null_percentage < 80:
+                # Fill all columns with their median values
+                df[numeric_columns] = df[numeric_columns].fillna(medians)
+                non_numeric_columns = df.select_dtypes(exclude=['number']).columns
+                for col in non_numeric_columns:
+                    df[col] = df[col].fillna(method='ffill')
+
+            
+                # Create an instance of EnhancedHealthMetrics
+                analyzer = EnhancedHealthMetrics(df)
+                
+                # Generate the report using the instance method
+                report = analyzer.generate_report()
+                
+                report = json.loads(json.dumps(report, default=lambda x: int(x) if isinstance(x, np.integer) else x))
+                final_json = analyzer.get_full_data()
+                # Benchmark and test
+                start_time = time.time()
+                results = generate_health_insights(final_json)
+                execution_time = time.time() - start_time
+
+                # Convert results if needed
+                results = json.loads(json.dumps(results, default=lambda x: int(x) if isinstance(x, np.integer) else x))
+
+                # Append results directly into report
+                report.update(results)        
+                return jsonify(report), 200
+
+            else:
+                report = {
+                "action_items": {
+                    "immediate_actions": None,
+                    "long_term_goals": None
+                },
+                "insights": {
+                    "primary_risk_factors": None,
+                    "trend_analysis": None
+                },
+                "recommendations": {
+                    "diet_suggestion": None,
+                    "heart_health": None,
+                    "kidney_health": None,
+                    "liver_health": None,
+                    "medication": None,
+                    "mental_health_screening": None,
+                    "monitoring": None
+                },
+                "risk_scores": {
+                    "scores": {
+                        "Total_Diabetes_Points": None,
+                        "Total_Stroke_Points": None,
+                        "adjusted_stroke_risk": None,
+                        "advice_diabetes": None,
+                        "base_ascvd_risk": None,
+                        "base_diabetes_risk": None,
+                        "base_diabetes_risk_type": None,
+                        "base_stroke_risk": None,
+                        "chd_risk": None,
+                        "ckd_risk_category": None,
+                        "ckd_risk_group": None,
+                        "ckd_risk_points": None,
+                        "enhanced_ascvd_risk": None,
+                        "overall_risk_percentage": None,
+                        "risk_category": None,
+                        "stroke_risk_category": None
+                    }
+                },
+                "summary": None}
+                return jsonify(report),200
+
 
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
