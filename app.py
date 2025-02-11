@@ -128,7 +128,7 @@ class HealthMetrics:
                 break
 
         # Add points for diabetes
-        total_points += point_systems[gender]['diabetes'] if has_diabetes != 'Never' else 0
+        total_points += point_systems[gender]['diabetes'] if has_diabetes != 'No' else 0
 
         # Add points for smoking
         total_points += point_systems[gender]['smoking'] if is_smoker != 'Never' else 0
@@ -160,7 +160,15 @@ class HealthMetrics:
             else:
                 ten_year_risk =  risk_lookup_female[total_points]
 
-        return ten_year_risk
+        if ten_year_risk < 8:
+            category = 'Low'
+        elif 8 <= ten_year_risk < 15:
+            category ='Moderate'
+        else:
+            category ='High'
+
+        return ten_year_risk , category
+
 
     def ascvd_risk_score(self, entry):
         # Coefficients remain the same
@@ -199,13 +207,24 @@ class HealthMetrics:
         baseline_survival = 0.9012 if entry['sex'] == 'M' else 0.9215
 
         # Corrected: Use appropriate mean_lp (example value, adjust based on model specifics)
-        mean_lp = 21.91  # Example value, replace with correct meanβX for your model
+        mean_lp = 24.11
         base_risk = 1 - (baseline_survival ** np.exp(risk_sum - mean_lp))
         
         # Apply ethnicity multiplier
         enhanced_risk = base_risk * 1.8
+        base_risk_percent = round(base_risk*100, 2)
+        enhanced_risk_percent = round(enhanced_risk*100, 2)
 
-        return round(base_risk * 100, 2), round(enhanced_risk * 100, 2)
+        # Determine risk category
+        if enhanced_risk_percent < 5:
+            category = 'Low'
+        elif 5 <= enhanced_risk_percent < 15:
+            category = 'Moderate'
+        else:
+            category = 'High'
+
+        return base_risk_percent, enhanced_risk_percent, category
+
 
     def categorize_stroke_risk(self,risk):
         if risk < 5:
@@ -357,43 +376,46 @@ class HealthMetrics:
     
 
 class EnhancedHealthMetrics(HealthMetrics):
-    def __init__(self, person_id):
-        super().__init__(person_id)
+    def __init__(self, person_data):
+        super().__init__(person_data)
         
         self.metrics_df = self.health_data
         # Assuming self.metrics_df is your DataFrame with columns 'wt_kg' and 'ht_cm'
         self.metrics_df['bmi'] = round(self.metrics_df['wt_kg'] / ((self.metrics_df['ht_cm'] / 100) ** 2), 1)
         
         self.perform_scoring()
-        self.bmi  = self.metrics_df['bmi'].iloc[-1],
-        self.chd_risk = self.metrics_df['chd_risk'].iloc[-1],
-        self.base_ascvd_risk = self.metrics_df['base_ascvd_risk'].iloc[-1],
-        self.enhanced_ascvd_risk = self.metrics_df['enhanced_ascvd_risk'].iloc[-1],
-        self.Total_Stroke_Points = self.metrics_df['Total_Stroke_Points'].iloc[-1],
-        self.base_stroke_risk = self.metrics_df['base_stroke_risk'].iloc[-1],
-        self.adjusted_stroke_risk = self.metrics_df['adjusted_stroke_risk'].iloc[-1],
-        self.stroke_risk_category = self.metrics_df['stroke_risk_category'].iloc[-1],
-        self.Total_Diabetes_Points = self.metrics_df['Total_Diabetes_Points'].iloc[-1],
-        self.base_diabetes_risk = self.metrics_df['base_diabetes_risk'].iloc[-1],
-        self.base_diabetes_risk_type = self.metrics_df['base_diabetes_risk_type'].iloc[-1],
-        self.advice_diabetes = self.metrics_df['advice_diabetes'].iloc[-1],
+        self.bmi  = self.metrics_df['bmi'].iloc[-1]
+        self.chd_risk = self.metrics_df['chd_risk'].iloc[-1]
+        self.chd_risk_category = self.metrics_df['chd_risk_category'].iloc[-1]
+        self.base_ascvd_risk = self.metrics_df['base_ascvd_risk'].iloc[-1]
+        self.enhanced_ascvd_risk = self.metrics_df['enhanced_ascvd_risk'].iloc[-1]
+        self.ascvd_category = self.metrics_df['ascvd_category'].iloc[-1]
+        self.Total_Stroke_Points = self.metrics_df['Total_Stroke_Points'].iloc[-1]
+        self.base_stroke_risk = self.metrics_df['base_stroke_risk'].iloc[-1]
+        self.adjusted_stroke_risk = self.metrics_df['adjusted_stroke_risk'].iloc[-1]
+        self.stroke_risk_category = self.metrics_df['stroke_risk_category'].iloc[-1]
+        self.Total_Diabetes_Points = self.metrics_df['Total_Diabetes_Points'].iloc[-1]
+        self.base_diabetes_risk = self.metrics_df['base_diabetes_risk'].iloc[-1]
+        self.base_diabetes_risk_type = self.metrics_df['base_diabetes_risk_type'].iloc[-1]
+        self.advice_diabetes = self.metrics_df['advice_diabetes'].iloc[-1]
         self.ckd_risk_points = self.metrics_df['ckd_risk_points'].iloc[-1]
         self.ckd_risk_group = self.metrics_df['ckd_risk_group'].iloc[-1]
-        self.ckd_risk_category = self.metrics_df['ckd_risk_category'].iloc[-1]
+        self.ckd_kidney_risk_category = self.metrics_df['ckd_kidney_risk_category'].iloc[-1]
         self.overall_risk_percentage = self.metrics_df['overall_risk_percentage'].iloc[-1]
-        self.risk_category = self.metrics_df['risk_category'].iloc[-1]
+        self.risk_category = self.metrics_df['overall_risk_category'].iloc[-1]
 
         
     def perform_scoring(self):
         # Calculate risk entry
-        self.metrics_df['chd_risk'] = self.metrics_df.apply(
-            lambda x: self.coronary_heart_disease_risk_score(x), axis=1
+
+        self.metrics_df[['chd_risk','chd_risk_category']] = self.metrics_df.apply(
+            lambda x: self.coronary_heart_disease_risk_score(x), axis=1,result_type='expand'
         )
 
-        self.metrics_df[['base_ascvd_risk', 'enhanced_ascvd_risk']] = self.metrics_df.apply(
+        self.metrics_df[['base_ascvd_risk', 'enhanced_ascvd_risk','ascvd_category']] = self.metrics_df.apply(
             lambda x: self.ascvd_risk_score(x), axis=1, result_type='expand'
         )
-        
+
         self.metrics_df[['Total_Stroke_Points', 'base_stroke_risk', 'adjusted_stroke_risk', 'stroke_risk_category']] = self.metrics_df.apply(
             lambda x: self.calculate_stroke_risk(x), axis=1, result_type='expand'
         )
@@ -402,11 +424,11 @@ class EnhancedHealthMetrics(HealthMetrics):
             lambda x: self.calculate_diabetes_risk(x), axis=1, result_type='expand'
         )
 
-        self.metrics_df[['ckd_risk_points','ckd_risk_group' ,'ckd_risk_category']] = self.metrics_df.apply(
+        self.metrics_df[['ckd_risk_points','ckd_risk_group' ,'ckd_kidney_risk_category']] = self.metrics_df.apply(
             lambda x: self.calculate_kidney_risk(x), axis=1,result_type='expand'
         )
 
-        self.metrics_df[['overall_risk_percentage', 'risk_category']] = self.metrics_df.apply(
+        self.metrics_df[['overall_risk_percentage', 'overall_risk_category']] = self.metrics_df.apply(
             lambda x: self.calculate_overall_risk(x), axis=1,result_type='expand'
         )
         
@@ -471,8 +493,10 @@ class EnhancedHealthMetrics(HealthMetrics):
         status = {
             'scores': {
                 'chd_risk': self.metrics_df['chd_risk'].iloc[-1],
+                'chd_risk_category':self.metrics_df['chd_risk_category'].iloc[-1],
                 'base_ascvd_risk': self.metrics_df['base_ascvd_risk'].iloc[-1],
                 'enhanced_ascvd_risk': self.metrics_df['enhanced_ascvd_risk'].iloc[-1],
+                'ascvd_category':self.metrics_df['ascvd_category'].iloc[-1],
                 'Total_Stroke_Points': self.metrics_df['Total_Stroke_Points'].iloc[-1],
                 'base_stroke_risk': self.metrics_df['base_stroke_risk'].iloc[-1],
                 'adjusted_stroke_risk': self.metrics_df['adjusted_stroke_risk'].iloc[-1],
@@ -483,8 +507,8 @@ class EnhancedHealthMetrics(HealthMetrics):
                 'advice_diabetes':self.metrics_df['advice_diabetes'].iloc[-1],
                 'ckd_risk_points':self.metrics_df['ckd_risk_points'].iloc[-1],
                 'ckd_risk_group':self.metrics_df['ckd_risk_group'].iloc[-1],
-                'ckd_risk_category':self.metrics_df['ckd_risk_category'].iloc[-1],
-                'risk_category':self.metrics_df['risk_category'].iloc[-1],
+                'ckd_kidney_risk_category': self.metrics_df['ckd_kidney_risk_category'].iloc[-1],
+                'overall_risk_category':self.metrics_df['overall_risk_category'].iloc[-1],
                 'overall_risk_percentage':self.metrics_df['overall_risk_percentage'].iloc[-1],
 
             }
@@ -534,13 +558,13 @@ def generate_report():
                 for col in non_numeric_columns:
                     df[col] = df[col].fillna(method='ffill')
 
-            
+
                 # Create an instance of EnhancedHealthMetrics
                 analyzer = EnhancedHealthMetrics(df)
                 
                 # Generate the report using the instance method
                 report = analyzer.generate_report()
-                
+
                 report = json.loads(json.dumps(report, default=lambda x: int(x) if isinstance(x, np.integer) else x))
                 final_json = analyzer.get_full_data()
                 # Benchmark and test
