@@ -125,7 +125,7 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
 
     try:
         response = ollama.chat(
-        model='qwen2.5:3b',
+        model='qwen2.5:7b',
         messages=[{'role': 'user', 'content': prompt}],
         format=ClinicalAssessment.model_json_schema(),
         options={
