@@ -51,7 +51,7 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
     3. **Recommendations**: Generate actionable recommendations for each category. Justify each recommendation with specific metric values and ideal ranges.
     4. **Insights**: Analyze trends and risk factors for the specified metrics. Quantify changes and provide justifications.
     5. **Summary**: Provide a detailed summary of the patient's current health status, including specific metrics and their ideal ranges.
-
+    6. **Do not repeat same contents, use unique points. For trends_analysis use above metrics also with quantifying with rationale.**
     ---
 
     ### **Structured JSON Template**:
@@ -97,7 +97,7 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
         "trend_analysis": [
           "Trend analysis 1 with quantified changes and justification.",
           "Trend analysis 2 with quantified changes and justification.",
-          **generate at least 4 trends having comparison with age and specific risk values**
+          **generate at least 4 trends with quantifying every points with proper rationale for better readability with points different from primary_risk_factors**
         ]
       }},
       "action_items": {{
@@ -115,6 +115,20 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
 
     ---
 
+    ### **Guidelines for Insights**:  
+      1. Data Order: Data is sorted in chronological or ascending order by age.
+      2. Insight Justification: Clearly explain each trend or factor with rationale, using specific numbers. Validate data thoroughly and avoid repeating points.
+      3. Differentiation of sub-sections of insights keys:
+          - For Trend Analysis: Analyze historical data to identify trends over time. Use metrics relevant to trends.
+          - For Primary Risk Factors: Focus on the latest data only, highlighting current risk factors and their impact. Use metrics relevant to current risks.
+          - Do not use same metrics for both the subsections have different metrics for comparison.
+        4. Metrics: Use different metrics for trend analysis and primary risk factors. Do not repeat metrics in both sections **immportant**.
+        5. Quantity: Provide at least 4 unique points for each section, supported by data.
+        6. Data Usage: Only use the provided patient data. Do not make assumptions or add external information.
+        7. Formatting: Avoid special symbols or brackets in the insights and see guidelines for keywords and use their full names.
+
+    ---
+
     ### **Critical Instructions**:
     1. **Prioritize Specified Metrics**: Focus on the metrics listed above for every profile. Only include common metrics like **BMI** and **FBS** if they are significantly out of range or concerning.
     2. **Avoid Repetition**: Ensure there is no repetition of sentences or content between **primary_risk_factors** and **trend_analysis**.
@@ -128,18 +142,43 @@ def generate_health_insights(input_data: dict) -> ClinicalAssessment:
 
     ---
 
-    ### **Important Notes**:
-    - Only use the provided patient data. Do not make assumptions or add extraneous information.
-    - Validate the output thrice to ensure accuracy and adherence to the data.
-    - Follow the JSON schema strictly.
+    ### **Guidelines for recommendations**:
+         - Have 2 points at least generated and validate with the patient's data as well
 
-    ### **Guidelines for Insights**:  
-        - Justify each trend or factor with clear rationale, quantifying insights with appropriate numbers and validating the data twice and mot repeat same points in insights.
-        - difference should be there between trends analysis and primary risk factors, primary risk factors should show latest data only and their impact while trend analysis have to analyze historical data to generate trends based on the metrics stated above for each organ profile stated earlier in the prompt.
-        - generate at least 4 points each with proper numbers.Only use the provided patient data. Do not make assumptions or add extraneous information.
+    ---
 
+    ### **Guidelines for Keywords**:
+            "chd": "Coronary Heart Disease",
+            "ckd": "Chronic Kidney Disease",
+            "ascvd": "Atherosclerotic Cardiovascular Disease",
+            "fbs": "Fasting Blood Sugar",
+            "ppbs": "Postprandial Blood Sugar",
+            "hba1c": "Hemoglobin A1c",
+            "t_choles": "Total Cholesterol",
+            "hdl": "High-Density Lipoprotein",
+            "ldl": "Low-Density Lipoprotein",
+            "sr_creatinine": "Serum Creatinine",
+            "sr_albumin": "Serum Albumin",
+            "sr_globulin": "Serum Globulin",
+            "hb": "Hemoglobin",
+            "wbc": "White Blood Cells",
+            "plt": "Platelets",
+            "t_bilirubin": "Total Bilirubin",
+            "temp_f": "Temperature (Fahrenheit)",
+            "spo2": "Oxygen Saturation",
+            "sbp": "Systolic Blood Pressure",
+            "dbp": "Diastolic Blood Pressure",
+            "heart_rate": "Heart Rate",
+            "waist_circumference": "Waist Circumference",
+            "phy_activity": "Physical Activity",
+            "smoking": "Smoking",
+            "alcohol_intake": "Alcohol Intake",
+            "family_h_o_dm": "Family History of Diabetes Mellitus",
+            "family_h_o_heart_disease": "Family History of Heart Disease"
+
+          - Use this keywords can be in capital,small or camel case but use full name in recommendations,insights and summary and in goals as well.
     """
-    print(prompt)
+
     try:
         response = ollama.chat(
         model='qwen2.5:3b',
