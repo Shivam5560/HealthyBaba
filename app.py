@@ -20,7 +20,7 @@ class HealthMetrics:
         sex = row['sex']
         
         # Calculate eGFR (example uses simplified CKD-EPI formula)
-        if sex == 1:  # Male
+        if sex == 'M':  # Male
             if creatinine <= 0.9:
                 egfr = 141 * (creatinine / 0.9) ** -0.411 * 0.993 ** age
             else:
@@ -229,36 +229,39 @@ class HealthMetrics:
     def categorize_stroke_risk(self,risk):
         if risk < 5:
             return 'Low'
-        elif 5 <= risk < 15:
+        elif 5 <= risk < 12:
             return 'Moderate'
         else:
             return 'High'
     
     def calculate_stroke_risk(self,entry):
-        # Base survival rate for reference individual
-        S_ref = 0.99982  # For healthy 20yo female with no risks[3]
+        # Base survival rate for Indians
+        S_ref = 0.985
         
         # Risk points calculation (modified for Indian population)
         points = 0
         
         # 1. Demographic Factors
-        points += max(entry['age'] - 20, 0)  # 1 point/year over 20[3]
-        points += 3 if entry['sex'] == 'M' else 0  # [3]
+        points += max(entry['age'] - 20, 0) 
+        points += 3 if entry['sex'] == 'M' else 0 
         
         # 2. Medical History
-        points += 8 if entry['family_h_o_dm']=='Yes' else 0  # Diabetes[3]
-        points += 5 if entry['family_h_o_heart_disease']=="Yes" else 0  # [3]
-        points += 2 if entry['sbp'] >= 140 or entry['dbp'] >= 90 else 0  # Hypertension[5]
+        points += 8 if entry['family_h_o_dm']=='Yes' else 0  
+        points += 5 if entry['family_h_o_heart_disease']=="Yes" else 0 
+        points += 2 if entry['sbp'] >= 140 or entry['dbp'] >= 90 else 0 
         
         # 3. Lifestyle Factors
-        points += 8 if entry['smoking']!="Never" else 0  # [3]
-        points += 3 if entry['alcohol_intake']!="Never" else 0  # >7 drinks/week[3]
-        points += 2 if entry['phy_activity']=="Light" else 0  
+        if entry['smoking'] not in ['Never','Occasionally']:
+            points += 8
+        if entry['alcohol_intake'] not in ['Never','Occasionally']:
+            points += 2
+
+        points += 2 if entry['phy_activity']=="Never" else 0  
         
         # 4. Metabolic Markers
-        points += 7 if entry['hba1c'] >= 6.5 else (3 if 5.7 <= entry['hba1c'] < 6.5 else 0)  # [3][4]
-        points += 2 if entry['bmi'] >= 25 else 0  # [5]
-        points += 2 if entry['waist_circumference'] > 90 else 0  # Male threshold[4]
+        points += 7 if entry['hba1c'] >= 6.5 else (3 if 5.7 <= entry['hba1c'] < 6.5 else 0)  
+        points += 2 if entry['bmi'] >= 25 else 0  
+        points += 2 if entry['waist_circumference'] > 90 else 0  
         
         # 5. Lipid Profile
         points += 1 if entry['ldl'] > 160 else 0  # [5]
@@ -304,10 +307,12 @@ class HealthMetrics:
             points += 6
 
         # 6. smoking
-        points += 2 if entry['smoking'] != 'Never' else 0
+        if entry['smoking'] not in ['Never','Occasionally']:
+            points += 2 
+
 
         # 7. Physical Activity
-        points += 2 if entry['phy_activity'] == 'Light' else 0
+        points += 2 if entry['phy_activity'] == 'Never' else 0
 
         # 8. Waist Measurement
         is_high_risk_ethnicity = True
@@ -346,30 +351,26 @@ class HealthMetrics:
                     points += 7
 
         # Risk Categorization
-        if points <= 5:
+        if points <= 11:
             risk = 'Low'
             risk_type = '(1 in 100)'
-            advice = 'Maintain healthy lifestyle'
-        elif 6 <= points <= 11:
+            advice = 'Maintain a healthy lifestyle.'
+        elif 12 <= points <= 14:
             risk = 'Moderate'
-            advice = 'Discuss with doctor, improve lifestyle'
-            if 6 <= points <= 8:
-                risk_type = '(1 in 50)'
-            else:
-                risk_type = '(1 in 30)'
-        else:
+            risk_type = '(1 in 25)'
+            advice = 'Discuss with your doctor and consider lifestyle changes.'
+        elif 15 <= points <= 19:
             risk = 'High'
-            if 12 <= points <= 15:
-                risk_type = '(1 in 14)'
-            elif 16 <= points <= 19:
-                risk_type = '(1 in 7)'
-            else:
-                risk_type = '(1 in 3)'
-            advice = 'Get fasting blood glucose test immediately'
+            risk_type = '(1 in 6)'
+            advice = 'Get a fasting blood glucose test and consult your doctor.'
+        else:
+            risk = 'Very High'
+            risk_type = '(1 in 3)'
+            advice = 'Immediate medical consultation and testing required.'
 
-        # age warning for <25 years
+        # Age warning for individuals under 25
         if age < 25 and points >= 12:
-            advice += '\n*Risk may be overestimated in under-25s'
+            advice += '\n*Risk may be overestimated in individuals under 25 years of age.'
 
         return (points, risk, risk_type, advice)
 
@@ -398,7 +399,7 @@ class EnhancedHealthMetrics(HealthMetrics):
         self.base_diabetes_risk = self.metrics_df['base_diabetes_risk'].iloc[-1]
         self.base_diabetes_risk_type = self.metrics_df['base_diabetes_risk_type'].iloc[-1]
         self.advice_diabetes = self.metrics_df['advice_diabetes'].iloc[-1]
-        self.ckd_risk_points = self.metrics_df['ckd_risk_points'].iloc[-1]
+        self.ckd_egfr_risk_points = self.metrics_df['ckd_egfr_risk_points'].iloc[-1]
         self.ckd_risk_group = self.metrics_df['ckd_risk_group'].iloc[-1]
         self.ckd_kidney_risk_category = self.metrics_df['ckd_kidney_risk_category'].iloc[-1]
         self.overall_risk_percentage = self.metrics_df['overall_risk_percentage'].iloc[-1]
@@ -424,7 +425,7 @@ class EnhancedHealthMetrics(HealthMetrics):
             lambda x: self.calculate_diabetes_risk(x), axis=1, result_type='expand'
         )
 
-        self.metrics_df[['ckd_risk_points','ckd_risk_group' ,'ckd_kidney_risk_category']] = self.metrics_df.apply(
+        self.metrics_df[['ckd_egfr_risk_points','ckd_risk_group' ,'ckd_kidney_risk_category']] = self.metrics_df.apply(
             lambda x: self.calculate_kidney_risk(x), axis=1,result_type='expand'
         )
 
@@ -494,13 +495,19 @@ class EnhancedHealthMetrics(HealthMetrics):
                 'heart_risk_metrics':{
                     'chd_risk': self.metrics_df['chd_risk'].iloc[-1],
                     'chd_risk_category':self.metrics_df['chd_risk_category'].iloc[-1],
+                    'chd_risk_ideal_min':0,
+                    'chd_risk_ideal_max':5,
                     'base_ascvd_risk': self.metrics_df['base_ascvd_risk'].iloc[-1],
                     'enhanced_ascvd_risk': self.metrics_df['enhanced_ascvd_risk'].iloc[-1],
                     'ascvd_category':self.metrics_df['ascvd_category'].iloc[-1],
+                    'ascvd_risk_ideal_min':0,
+                    'ascvd_risk_ideal_max':5,
                     'Total_Stroke_Points': self.metrics_df['Total_Stroke_Points'].iloc[-1],
                     'base_stroke_risk': self.metrics_df['base_stroke_risk'].iloc[-1],
                     'adjusted_stroke_risk': self.metrics_df['adjusted_stroke_risk'].iloc[-1],
                     'stroke_risk_category': self.metrics_df['stroke_risk_category'].iloc[-1],
+                    'stroke_risk_ideal_min':0,
+                    'stroke_risk_ideal_max':5,
                 },
                 
                 'diabetes_risk_metrics':{
@@ -508,19 +515,25 @@ class EnhancedHealthMetrics(HealthMetrics):
                     'base_diabetes_risk':self.metrics_df['base_diabetes_risk'].iloc[-1],
                     'base_diabetes_risk_type':self.metrics_df['base_diabetes_risk_type'].iloc[-1],
                     'advice_diabetes':self.metrics_df['advice_diabetes'].iloc[-1],
+                    'total_diabetes_ideal_min':0,
+                    'total_diabetes_ideal_max':11,
                 },
                 
 
                 'kidney_risk_metrics':{
-                    'ckd_risk_points':self.metrics_df['ckd_risk_points'].iloc[-1],
+                    'ckd_egfr_risk_points':self.metrics_df['ckd_egfr_risk_points'].iloc[-1],
                     'ckd_risk_group':self.metrics_df['ckd_risk_group'].iloc[-1],
                     'ckd_kidney_risk_category': self.metrics_df['ckd_kidney_risk_category'].iloc[-1],
+                    'ckd_kidney_ideal_range_min':60,
+                    'ckd_kidney_ideal_range_max':130,
                 },
                 
 
                 'overall_risk_metrics':{
                     'overall_risk_category':self.metrics_df['overall_risk_category'].iloc[-1],
                     'overall_risk_percentage':self.metrics_df['overall_risk_percentage'].iloc[-1],
+                    'overall_risk_ideal_min':0,
+                    'overall_risk_ideal_max':30,
                 },
         }
         return status
@@ -590,46 +603,50 @@ def generate_report():
                 return jsonify(report), 200
 
             else:
-                report = {
-                "action_items": {
-                    "immediate_actions": None,
-                    "long_term_goals": None
+                status = {
+                'heart_risk_metrics': {
+                    'chd_risk': None,
+                    'chd_risk_category': None,
+                    'chd_risk_ideal_min': None,
+                    'chd_risk_ideal_max': None,
+                    'base_ascvd_risk': None,
+                    'enhanced_ascvd_risk': None,
+                    'ascvd_category': None,
+                    'ascvd_risk_ideal_min': None,
+                    'ascvd_risk_ideal_max': None,
+                    'Total_Stroke_Points': None,
+                    'base_stroke_risk': None,
+                    'adjusted_stroke_risk': None,
+                    'stroke_risk_category': None,
+                    'stroke_risk_ideal_min': None,
+                    'stroke_risk_ideal_max': None,
                 },
-                "insights": {
-                    "primary_risk_factors": None,
-                    "trend_analysis": None
+
+                'diabetes_risk_metrics': {
+                    'Total_Diabetes_Points': None,
+                    'base_diabetes_risk': None,
+                    'base_diabetes_risk_type': None,
+                    'advice_diabetes': None,
+                    'total_diabetes_ideal_min': None,
+                    'total_diabetes_ideal_max': None,
                 },
-                "recommendations": {
-                    "diet_suggestion": None,
-                    "heart_health": None,
-                    "kidney_health": None,
-                    "liver_health": None,
-                    "medication": None,
-                    "mental_health_screening": None,
-                    "monitoring": None
+
+                'kidney_risk_metrics': {
+                    'ckd_egfr_risk_points': None,
+                    'ckd_risk_group': None,
+                    'ckd_kidney_risk_category': None,
+                    'ckd_kidney_ideal_range_min': None,
+                    'ckd_kidney_ideal_range_max': None,
                 },
-                "risk_scores": {
-                    "scores": {
-                        "Total_Diabetes_Points": None,
-                        "Total_Stroke_Points": None,
-                        "adjusted_stroke_risk": None,
-                        "advice_diabetes": None,
-                        "base_ascvd_risk": None,
-                        "base_diabetes_risk": None,
-                        "base_diabetes_risk_type": None,
-                        "base_stroke_risk": None,
-                        "chd_risk": None,
-                        "ckd_risk_category": None,
-                        "ckd_risk_group": None,
-                        "ckd_risk_points": None,
-                        "enhanced_ascvd_risk": None,
-                        "overall_risk_percentage": None,
-                        "risk_category": None,
-                        "stroke_risk_category": None
-                    }
+
+                'overall_risk_metrics': {
+                    'overall_risk_category': None,
+                    'overall_risk_percentage': None,
+                    'overall_risk_ideal_min': None,
+                    'overall_risk_ideal_max': None,
                 },
-                "summary": None}
-                return jsonify(report),200
+            }
+                return jsonify(status),200
 
 
     except ValueError as e:
