@@ -213,7 +213,7 @@ class HealthMetrics:
         # Apply ethnicity multiplier
         enhanced_risk = base_risk * 1.8
         base_risk_percent = round(base_risk*100, 2)
-        enhanced_risk_percent = round(enhanced_risk*100, 2)
+        enhanced_risk_percent = max(round(enhanced_risk*100, 2),100) #cap
 
         # Determine risk category
         if enhanced_risk_percent < 5:
@@ -334,21 +334,7 @@ class HealthMetrics:
                     points += 4
                 else:
                     points += 7
-        else:
-            if gender == 'M':
-                if waist < 102:
-                    points += 0
-                elif 102 <= waist <= 110:
-                    points += 4
-                else:
-                    points += 7
-            else:  # Female
-                if waist < 88:
-                    points += 0
-                elif 88 <= waist <= 100:
-                    points += 4
-                else:
-                    points += 7
+
 
         # Risk Categorization
         if points <= 11:
@@ -497,17 +483,23 @@ class EnhancedHealthMetrics(HealthMetrics):
                     'chd_risk_category':self.metrics_df['chd_risk_category'].iloc[-1],
                     'chd_risk_ideal_min':0,
                     'chd_risk_ideal_max':5,
+                    'chd_risk_min':0,
+                    'chd_risk_max':56,
                     'base_ascvd_risk': self.metrics_df['base_ascvd_risk'].iloc[-1],
                     'enhanced_ascvd_risk': self.metrics_df['enhanced_ascvd_risk'].iloc[-1],
                     'ascvd_category':self.metrics_df['ascvd_category'].iloc[-1],
                     'ascvd_risk_ideal_min':0,
                     'ascvd_risk_ideal_max':5,
+                    'ascvd_risk_min':0,
+                    'ascvd_risk_max':100,
                     'Total_Stroke_Points': self.metrics_df['Total_Stroke_Points'].iloc[-1],
                     'base_stroke_risk': self.metrics_df['base_stroke_risk'].iloc[-1],
                     'adjusted_stroke_risk': self.metrics_df['adjusted_stroke_risk'].iloc[-1],
                     'stroke_risk_category': self.metrics_df['stroke_risk_category'].iloc[-1],
                     'stroke_risk_ideal_min':0,
                     'stroke_risk_ideal_max':5,
+                    'total_stroke_points_risk_min':0,
+                    'total_stroke_points_risk_max':100,
                 },
                 
                 'diabetes_risk_metrics':{
@@ -517,6 +509,8 @@ class EnhancedHealthMetrics(HealthMetrics):
                     'advice_diabetes':self.metrics_df['advice_diabetes'].iloc[-1],
                     'total_diabetes_ideal_min':0,
                     'total_diabetes_ideal_max':11,
+                    'total_diabetes_min':0,
+                    'total_diabetes_max':33,
                 },
                 
 
@@ -524,16 +518,18 @@ class EnhancedHealthMetrics(HealthMetrics):
                     'ckd_egfr_risk_points':self.metrics_df['ckd_egfr_risk_points'].iloc[-1],
                     'ckd_risk_group':self.metrics_df['ckd_risk_group'].iloc[-1],
                     'ckd_kidney_risk_category': self.metrics_df['ckd_kidney_risk_category'].iloc[-1],
-                    'ckd_kidney_ideal_range_min':60,
+                    'ckd_kidney_ideal_range_min':80,
                     'ckd_kidney_ideal_range_max':130,
+                    'ckd_kidney_min':0,
+                    'ckd_kidney_max':130,
                 },
                 
 
                 'overall_risk_metrics':{
                     'overall_risk_category':self.metrics_df['overall_risk_category'].iloc[-1],
                     'overall_risk_percentage':self.metrics_df['overall_risk_percentage'].iloc[-1],
-                    'overall_risk_ideal_min':0,
-                    'overall_risk_ideal_max':30,
+                    'overall_risk_min':0,
+                    'overall_risk_max':100,
                 },
         }
         return status
