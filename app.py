@@ -305,16 +305,25 @@ class HealthMetrics:
         ppbs = entry['ppbs']
         if fbs >= 100 or ppbs >= 140:
             points += 6
+        
+        # 6. HbA1c
+        hba1c = entry['hba1c']
+        if hba1c >= 6.5:
+            points += 8
+        elif hba1c >= 5.7:
+            points += 4
+        else:
+            points += 0
 
-        # 6. smoking
+        # 7. smoking
         if entry['smoking'] not in ['Never','Occasionally']:
             points += 2 
 
 
-        # 7. Physical Activity
+        # 8. Physical Activity
         points += 2 if entry['phy_activity'] == 'Never' else 0
 
-        # 8. Waist Measurement
+        # 9. Waist Measurement
         is_high_risk_ethnicity = True
         waist = entry['waist_circumference']
         gender = entry['sex']
@@ -345,7 +354,7 @@ class HealthMetrics:
             risk = 'Moderate'
             risk_type = '(1 in 25)'
             advice = 'Discuss with your doctor and consider lifestyle changes.'
-        elif 15 <= points <= 19:
+        elif 15 <= points <= 24:
             risk = 'High'
             risk_type = '(1 in 6)'
             advice = 'Get a fasting blood glucose test and consult your doctor.'
@@ -508,9 +517,9 @@ class EnhancedHealthMetrics(HealthMetrics):
                     'base_diabetes_risk_type':self.metrics_df['base_diabetes_risk_type'].iloc[-1],
                     'advice_diabetes':self.metrics_df['advice_diabetes'].iloc[-1],
                     'total_diabetes_ideal_min':0,
-                    'total_diabetes_ideal_max':11,
+                    'total_diabetes_ideal_max':14,
                     'total_diabetes_min':0,
-                    'total_diabetes_max':33,
+                    'total_diabetes_max':41,
                 },
                 
 
